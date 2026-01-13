@@ -5,9 +5,20 @@ from functools import partial
 import redis
 from dotenv import load_dotenv
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import (
+    Updater,
+    CommandHandler,
+    MessageHandler,
+    Filters,
+    CallbackContext,
+    ConversationHandler,
+    RegexHandler
+)
 
 from utils import get_questions_list
+
+
+CHOOSING, ANSWERING = range(2)
 
 
 def format_answer(answer: str) -> str:
@@ -23,7 +34,7 @@ def format_answer(answer: str) -> str:
     return clean_answer
 
 
-def start(update: Update, context: CallbackContext) -> None:
+def start(update: Update, context: CallbackContext):
     keyboard = [
         ["Новый вопрос", "Сдаться"],
         ["Мой счёт"]
@@ -34,23 +45,45 @@ def start(update: Update, context: CallbackContext) -> None:
         reply_markup=reply_markup
     )
 
+    return CHOOSING
 
-def handle_buttons(update: Update, context: CallbackContext, database) -> None:
+
+def handle_new_question_request(update: Update, context: CallbackContext, database):
+    questions_folder = os.environ["QUESTIONS_FOLDER"]
+    questions_file = random.choice(os.listdir(questions_folder))
+    question = random.choice(get_questions_list(f"{questions_folder}/{questions_file}"))
+    update.message.reply_text(question["question"])
+    database.set(f"tg-{update.effective_chat.id}", question["answer"])
+
+    return ANSWERING
+
+
+def handle_solution_attempt(update: Update, context: CallbackContext, database):
     """Handle menu buttons"""
-    if update.message.text == "Новый вопрос":
-        questions_folder = os.environ["QUESTIONS_FOLDER"]
-        questions_file = "spb00per.txt"
-        question = random.choice(get_questions_list(f"{questions_folder}/{questions_file}"))
-        update.message.reply_text(question["question"])
-        database.set(f"tg-{update.effective_chat.id}", question["answer"])
+    user_key = f"tg-{update.effective_chat.id}"
+    answer = database.get(user_key).decode('utf-8')
+    user_answer = update.message.text
+    if user_answer.lower() == format_answer(answer):
+        positive_msg = "Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»"
+        update.message.reply_text(positive_msg)
+        database.delete(user_key)
+        return CHOOSING
     else:
+        update.message.reply_text("Неправильно… Попробуешь ещё раз?")
+        return ANSWERING
+
+
+def surrend(update: Update, context: CallbackContext, database):
+    user_key = f"tg-{update.effective_chat.id}"
+    if database.get(user_key):
         answer = database.get(f"tg-{update.effective_chat.id}").decode('utf-8')
-        user_answer = update.message.text
-        if user_answer.lower() == format_answer(answer):
-            positive_msg = "Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»"
-            update.message.reply_text(positive_msg)
-        else:
-            update.message.reply_text("Неправильно… Попробуешь ещё раз?")
+        update.message.reply_text(
+            f"Очень жаль, ответ был: {answer}\nДля следующего вопроса нажми «Новый вопрос»"
+        )
+        database.delete(user_key)
+    else:
+        update.message.reply_text("Для следующего вопроса нажми «Новый вопрос»")
+    return CHOOSING
 
 
 def main() -> None:
@@ -61,15 +94,29 @@ def main() -> None:
     password = os.environ["DB_PASSWORD"]
 
     redis_db = redis.StrictRedis(host, port, password=password)
-    handle_buttons_with_args = partial(handle_buttons, database=redis_db)
+    question_requests = partial(handle_new_question_request, database=redis_db)
+    solution_attempt = partial(handle_solution_attempt, database=redis_db)
+    surrend_func = partial(surrend, database=redis_db)
 
     token = os.environ["TG_TOKEN"]
     updater = Updater(token)
 
     dispatcher = updater.dispatcher
 
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(Filters.text, handle_buttons_with_args))
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            CHOOSING: [MessageHandler(Filters.regex("^Новый вопрос$"), question_requests)],
+            ANSWERING: [
+                MessageHandler(Filters.regex("^Сдаться$"), surrend_func),
+                MessageHandler(Filters.regex("^Новый вопрос$"), question_requests),
+                MessageHandler(Filters.text, solution_attempt),
+                ],
+        },
+        fallbacks=[MessageHandler(Filters.regex("^Сдаться$"), surrend_func)]
+    )
+
+    dispatcher.add_handler(conv_handler)
 
     updater.start_polling()
     updater.idle()
