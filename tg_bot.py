@@ -12,26 +12,12 @@ from telegram.ext import (
     Filters,
     CallbackContext,
     ConversationHandler,
-    RegexHandler
 )
 
-from utils import get_questions_list
+from utils import get_questions_list, format_answer
 
 
 CHOOSING, ANSWERING = range(2)
-
-
-def format_answer(answer: str) -> str:
-    answer = answer[:-1]
-    clean_answer = ""
-    for char in answer:
-        if char == "(":
-            break
-        clean_answer += char
-    clean_answer = clean_answer.lower()
-    if clean_answer[-1] == " ":
-        return clean_answer[:-1]
-    return clean_answer
 
 
 def start(update: Update, context: CallbackContext):

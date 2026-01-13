@@ -19,12 +19,21 @@ def get_questions_list(file_path):
 
         if line.startswith("Ответ"):
             element["answer"] = get_key(line)
-            continue
-
-        if line.startswith("Комментарий"):
-            element["comment"] = get_key(line)
 
         if element:
             material.append(element)
             element = {}
     return material
+
+
+def format_answer(answer: str) -> str:
+    answer = answer[:-1]
+    clean_answer = ""
+    for char in answer:
+        if char == "(":
+            break
+        clean_answer += char
+    clean_answer = clean_answer.lower()
+    if clean_answer[-1] == " ":
+        return clean_answer[:-1]
+    return clean_answer
