@@ -4,7 +4,7 @@ def get_key(value):
     return key
 
 
-def get_questions_dict(file_path):
+def get_questions_list(file_path):
 
     with open(file_path, 'r', encoding='KOI8-R') as file:
         file_content = file.read()
