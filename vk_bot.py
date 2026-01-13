@@ -28,6 +28,7 @@ def start(event, vk_api, keyboard):
 
 
 def handle_new_question_request(event, vk_api, database):
+    """Send a new question to the user and save the answer"""
     questions_folder = os.environ["QUESTIONS_FOLDER"]
     questions_file = random.choice(os.listdir(questions_folder))
     question = random.choice(get_questions_list(f"{questions_folder}/{questions_file}"))
@@ -37,6 +38,7 @@ def handle_new_question_request(event, vk_api, database):
 
 
 def surrend(event, vk_api, database):
+    """Send the answer to the user and clear his note in DB"""
     user_key = f"vk-{event.user_id}"
     if database.get(user_key):
         answer = database.get(user_key).decode('utf-8')
@@ -49,7 +51,7 @@ def surrend(event, vk_api, database):
 
 
 def handle_solution_attempt(event, vk_api, database):
-    """Handle menu buttons"""
+    """Handle attempt to give solution"""
     user_key = f"vk-{event.user_id}"
     answer = database.get(user_key).decode('utf-8')
     user_answer = event.text
@@ -64,7 +66,6 @@ def handle_solution_attempt(event, vk_api, database):
 
 
 def main():
-    """ Пример создания клавиатуры для отправки ботом """
     load_dotenv()
     host = os.environ["DB_HOST"]
     port = os.environ["DB_PORT"]

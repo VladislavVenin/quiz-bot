@@ -35,9 +35,11 @@ def start(update: Update, context: CallbackContext):
 
 
 def handle_new_question_request(update: Update, context: CallbackContext, database):
+    """Send a new question to the user and save the answer"""
     questions_folder = os.environ["QUESTIONS_FOLDER"]
     questions_file = random.choice(os.listdir(questions_folder))
     question = random.choice(get_questions_list(f"{questions_folder}/{questions_file}"))
+
     update.message.reply_text(question["question"])
     database.set(f"tg-{update.effective_chat.id}", question["answer"])
 
@@ -45,7 +47,7 @@ def handle_new_question_request(update: Update, context: CallbackContext, databa
 
 
 def handle_solution_attempt(update: Update, context: CallbackContext, database):
-    """Handle menu buttons"""
+    """Handle the attempt to give a solution"""
     user_key = f"tg-{update.effective_chat.id}"
     answer = database.get(user_key).decode('utf-8')
     user_answer = update.message.text
@@ -60,6 +62,7 @@ def handle_solution_attempt(update: Update, context: CallbackContext, database):
 
 
 def surrend(update: Update, context: CallbackContext, database):
+    """Send the answer to the user and clear his note in DB"""
     user_key = f"tg-{update.effective_chat.id}"
     if database.get(user_key):
         answer = database.get(f"tg-{update.effective_chat.id}").decode('utf-8')
@@ -73,7 +76,7 @@ def surrend(update: Update, context: CallbackContext, database):
 
 
 def main() -> None:
-    """Start the bot."""
+
     load_dotenv()
     host = os.environ["DB_HOST"]
     port = os.environ["DB_PORT"]
