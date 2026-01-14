@@ -37,7 +37,7 @@ def handle_new_question_request(event, vk_api, database):
     database.set(f"vk-{event.user_id}", question["answer"])
 
 
-def surrend(event, vk_api, database):
+def surrender(event, vk_api, database):
     """Send the answer to the user and clear his note in DB"""
     user_key = f"vk-{event.user_id}"
     if database.get(user_key):
@@ -70,7 +70,7 @@ def handle_solution_attempt(event, vk_api, database):
 def handle_message(event, vk_api, database, keyboard, message):
     check_list = {
         "Начать": lambda: start(event, vk_api, keyboard),
-        "Сдаться": lambda: surrend(event, vk_api, database),
+        "Сдаться": lambda: surrender(event, vk_api, database),
         "Новый вопрос": lambda: handle_new_question_request(event, vk_api, database),
         "Мой счёт": lambda: send_message(event, vk_api, "Этой функции ещё нет..."),
     }

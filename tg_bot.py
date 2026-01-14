@@ -61,7 +61,7 @@ def handle_solution_attempt(update: Update, context: CallbackContext, database):
         return ANSWERING
 
 
-def surrend(update: Update, context: CallbackContext, database):
+def surrender(update: Update, context: CallbackContext, database):
     """Send the answer to the user and clear his note in DB"""
     user_key = f"tg-{update.effective_chat.id}"
     if database.get(user_key):
@@ -85,7 +85,7 @@ def main() -> None:
     redis_db = redis.StrictRedis(host, port, password=password)
     question_requests = partial(handle_new_question_request, database=redis_db)
     solution_attempt = partial(handle_solution_attempt, database=redis_db)
-    surrend_func = partial(surrend, database=redis_db)
+    surrender_func = partial(surrender, database=redis_db)
 
     token = os.environ["TG_TOKEN"]
     updater = Updater(token)
@@ -97,12 +97,12 @@ def main() -> None:
         states={
             CHOOSING: [MessageHandler(Filters.regex("^Новый вопрос$"), question_requests)],
             ANSWERING: [
-                MessageHandler(Filters.regex("^Сдаться$"), surrend_func),
+                MessageHandler(Filters.regex("^Сдаться$"), surrender_func),
                 MessageHandler(Filters.regex("^Новый вопрос$"), question_requests),
                 MessageHandler(Filters.text, solution_attempt),
                 ],
         },
-        fallbacks=[MessageHandler(Filters.regex("^Сдаться$"), surrend_func)]
+        fallbacks=[MessageHandler(Filters.regex("^Сдаться$"), surrender_func)]
     )
 
     dispatcher.add_handler(conv_handler)

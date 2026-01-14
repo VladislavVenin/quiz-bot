@@ -1,4 +1,4 @@
-def get_key(value):
+def get_line_content(value):
     key = value.split(":")[1:]
     key = "".join(key).replace("\n", "")
     return key
@@ -9,21 +9,21 @@ def get_questions_list(file_path):
     with open(file_path, 'r', encoding='KOI8-R') as file:
         file_content = file.read()
 
-    material = []
-    element = {}
+    questions_list = []
+    question = {}
     splitted_content = file_content.split("\n\n")
     for line in splitted_content:
         if line.startswith("Вопрос"):
-            element["question"] = get_key(line)
+            question["question"] = get_line_content(line)
             continue
 
         if line.startswith("Ответ"):
-            element["answer"] = get_key(line)
+            question["answer"] = get_line_content(line)
 
-        if element:
-            material.append(element)
-            element = {}
-    return material
+        if question:
+            questions_list.append(question)
+            question = {}
+    return questions_list
 
 
 def format_answer(answer: str) -> str:
