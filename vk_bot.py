@@ -53,6 +53,8 @@ def surrend(event, vk_api, database):
 def handle_solution_attempt(event, vk_api, database):
     """Handle attempt to give solution"""
     user_key = f"vk-{event.user_id}"
+    if not database.get(user_key):
+        return
     answer = database.get(user_key).decode('utf-8')
     user_answer = event.text
 
@@ -63,6 +65,19 @@ def handle_solution_attempt(event, vk_api, database):
     else:
         message = "Неправильно… Попробуешь ещё раз?"
         send_message(event, vk_api, message)
+
+
+def handle_message(event, vk_api, database, keyboard, message):
+    check_list = {
+        "Начать": lambda: start(event, vk_api, keyboard),
+        "Сдаться": lambda: surrend(event, vk_api, database),
+        "Новый вопрос": lambda: handle_new_question_request(event, vk_api, database),
+        "Мой счёт": lambda: send_message(event, vk_api, "Этой функции ещё нет..."),
+    }
+    if message in check_list:
+        check_list[message]()
+    else:
+        handle_solution_attempt(event, vk_api, database)
 
 
 def main():
@@ -87,18 +102,7 @@ def main():
     longpoll = VkLongPoll(vk_session)
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            if event.text == "Начать":
-                start(event, vk_api, keyboard)
-            elif event.text == "Сдаться":
-                surrend(event, vk_api, redis_db)
-            elif event.text == "Новый вопрос":
-                handle_new_question_request(event, vk_api, redis_db)
-            elif event.text == "Мой счёт":
-                message = "Этой функции ещё нет...",
-                send_message(event, vk_api, message)
-            else:
-                if redis_db.get(f"vk-{event.user_id}"):
-                    handle_solution_attempt(event, vk_api, redis_db)
+            handle_message(event, vk_api, redis_db, keyboard, event.text)
 
 
 if __name__ == '__main__':
