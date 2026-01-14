@@ -9,7 +9,7 @@ def get_questions_list(file_path):
     with open(file_path, 'r', encoding='KOI8-R') as file:
         file_content = file.read()
 
-    questions_list = []
+    questions = []
     question = {}
     splitted_content = file_content.split("\n\n")
     for line in splitted_content:
@@ -21,9 +21,9 @@ def get_questions_list(file_path):
             question["answer"] = get_line_content(line)
 
         if question:
-            questions_list.append(question)
+            questions.append(question)
             question = {}
-    return questions_list
+    return questions
 
 
 def format_answer(answer: str) -> str:
